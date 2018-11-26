@@ -4,7 +4,7 @@
 const cvs = document.getElementById('canvas');
 const ctx = cvs.getContext('2d');
 
-var key_pressed = "NONE";
+var keys_pressed = {a: false, w: false, d: false, s: false};
 
 var pixel_size = 4; //the minimum block size@
 
@@ -12,30 +12,36 @@ function button_push_handler(event) {
     //Handles the changing of the global key_pressed when a button is pushed
     
     if (event.key == "a") { //a has been pressed
-        key_pressed = "LEFT";
+        keys_pressed.a = true;
     } else if (event.key == "w") { //w has been pressed
-        key_pressed = "UP";
+        keys_pressed.w = true;
     } else if (event.key == "d") { //d has been pressed
-        key_pressed = "RIGHT";
+        keys_pressed.d = true;
     } else if (event.key == "s") { //s has been pressed
-        key_pressed = "DOWN";
+        keys_pressed.s = true;
     }
 }
 
 function button_up_handler (event) {
     //Handles the resetting of the global key_pressed when a button is let go
     
-    if (event.key == "a" || event.key == "w" || event.key == "d" || event.key == "s") {
-        key_pressed = "NONE";
+    if (event.key == "a") {
+        keys_pressed.a = false;
+    } else if (event.key == "w") {
+        keys_pressed.w = false;
+    } else if (event.key == "d") {
+        keys_pressed.d = false;
+    } else if (event.key == "s") {
+        keys_pressed.s = false;
     }
 }
 
-document.addEventListener("keypress", button_push_handler);
+document.addEventListener("keydown", button_push_handler);
 
 document.addEventListener("keyup", button_up_handler);
 
 
-const blue_img = new Image();
+var blue_img = new Image();
 blue_img.src = "./images/blue.png";
 
 const background_img = new Image();
@@ -52,15 +58,18 @@ function game_loop() {
     
     ctx.drawImage(blue_img, blue.x, blue.y);
     
-    if (key_pressed == "LEFT") {
+    if (keys_pressed.a) {
         blue.x -= pixel_size;
-    } else if (key_pressed == "UP") {
+    } 
+    if (keys_pressed.w) {
         blue.y -= pixel_size; 
-    } else if (key_pressed == "RIGHT") {
+    }
+    if (keys_pressed.d) {
         blue.x += pixel_size; 
-    } else if (key_pressed == "DOWN") {
+    } 
+    if (keys_pressed.s) {
         blue.y += pixel_size; 
     }
 }
 
-var game = setInterval(game_loop, 16);
+var game = setInterval(game_loop, 30);
