@@ -52,6 +52,7 @@ class Blue {
 }
 
 var blue = new Blue(385, 395);
+var blue_collision = new CollisionSilhouette(385, 395, blue_img.width, blue_img.height);
 
 function button_push_handler(event) {
     //Handles the changing of the global key_pressed when a button is pushed
@@ -129,6 +130,11 @@ function game_loop(timestamp) {
     
     ctx.drawImage(blue_img, blue.x, blue.y);
     
+    ctx.fillStyle = "red";
+    ctx.fillRect(500, 350, 50, 50);
+    var box_collision = new CollisionSilhouette(500, 350, 50, 50);
+    
+    
     //************************************************************************
     //***************************** GAME PHYSICS *****************************
     //************************************************************************
@@ -155,9 +161,6 @@ function game_loop(timestamp) {
         blue.y += 10; 
     }
     
-    blue.y += y_velocity;
-    blue.x += x_velocity;
-    
     
     //********************************************************************
     //***************************** JUMPING  *****************************
@@ -177,11 +180,30 @@ function game_loop(timestamp) {
     //blue stop blue from falling past the ground (i.e stop y from becoming too large)
     if (blue.y > 395) {
         blue.y = 395;
+        blue_collision.y0 = 395;
         blue.is_in_air = false;
         blue.is_double_jumping = false;
         y_velocity = 0;
     }
     
+    
+    //**********************************************************************
+    //***************************** COLLISIONS *****************************
+    //**********************************************************************
+    
+    if (is_collision(blue_collision, box_collision)) { 
+        //TO DO
+    }
+    
+    
+    
+    //Move the characterconsole.log(blue_collision.x1); 
+    blue.y += y_velocity;
+    blue.x += x_velocity;
+    
+    //update collision silhouette
+    blue_collision.x0 += x_velocity;
+    blue_collision.y0 += y_velocity;
     
     
     if (iterations % 2 === 0) {
