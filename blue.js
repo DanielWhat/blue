@@ -9,7 +9,9 @@ var keys_pressed = {a: false, w: false, d: false, s: false, space: false};
 
 var pixel_size = 4; //the minimum block size@
 var y_velocity = 0;
+var x_velocity = 0;
 var gravity = 0.5;
+var friction = 0.80;
 
 var blue_img = new Image();
 blue_img.src = "./images/blue.png";
@@ -29,10 +31,22 @@ class Blue {
     
     is_walking() {
         //returns true if blue is walking
-        if (keys_pressed.a || keys_pressed.d) {
+        if ((keys_pressed.a || keys_pressed.d) && !this.is_in_air) { //can't be walking if you're jumping
             return true;
         } else {
             return false;
+        }
+    }
+    
+    facing_direction() {
+        //return the direction blue is facing: LEFT, RIGHT, or FORWARDS.
+        
+        if (keys_pressed.d) {
+            return "RIGHT";
+        } else if (keys_pressed.a) {
+            return "LEFT";
+        } else {
+            return "FORWARDS";
         }
     }
 }
@@ -93,11 +107,15 @@ function change_animation_frame() {
     //Changes@
     
     if (blue.is_walking()) { //(i.e atleast one key is down, so blue must be moving)
-        blue_img.src = "./images/walking_frame" + (frame_counter+1) + ".png";
+        blue_img.src = "./images/" + blue.facing_direction() + "/walking_frame" + (frame_counter+1) + ".png";
         frame_counter++;
         frame_counter %= 7;
     } else {
-       blue_img.src = "./images/blue.png"; 
+        if (blue.facing_direction() != "FORWARDS") {
+            blue_img.src = "./images/" + blue.facing_direction() + "/walking_frame1.png";
+        } else {
+            blue_img.src = "./images/blue.png";
+        }
     }
 }
 
@@ -111,9 +129,39 @@ function game_loop(timestamp) {
     
     ctx.drawImage(blue_img, blue.x, blue.y);
     
+    //************************************************************************
+    //***************************** GAME PHYSICS *****************************
+    //************************************************************************
+    
+    if (blue.is_in_air) { //if blue has jumped, then decrease the change in his y position (because gravity)
+        y_velocity += gravity;
+    }
+
+    x_velocity *= blue.is_in_air ? (friction + 0.19) : friction; //friction is less in the air
+    
+    if (Math.abs(x_velocity) < 0.25) {
+            x_velocity = 0;
+    }
+    
     if (keys_pressed.a) {
-        blue.x -= pixel_size;
+        x_velocity = -1 * 8; 
+    }
+    
+    if (keys_pressed.d) {
+        x_velocity = 8;
     } 
+    
+    if (keys_pressed.s) {
+        blue.y += 10; 
+    }
+    
+    blue.y += y_velocity;
+    blue.x += x_velocity;
+    
+    
+    //********************************************************************
+    //***************************** JUMPING  *****************************
+    //********************************************************************
     
     if (keys_pressed.space) {
         if (!blue.is_in_air) { //i.e blue is jumping for the first time
@@ -126,23 +174,7 @@ function game_loop(timestamp) {
         }
     }
     
-    if (blue.is_in_air) { //if blue has jumped, then decrease the change in his y position (because gravity)
-        y_velocity += gravity;
-    }
-    
-    if (keys_pressed.d) {
-        blue.x += pixel_size; 
-    } 
-    if (keys_pressed.s) {
-        blue.y += pixel_size; 
-    }
-    
-    if (iterations % 2 === 0) {
-        change_animation_frame();
-    }
-    
-    blue.y += y_velocity;
-    //keep blue on the grass (i.e stop y from becoming too large)
+    //blue stop blue from falling past the ground (i.e stop y from becoming too large)
     if (blue.y > 395) {
         blue.y = 395;
         blue.is_in_air = false;
@@ -150,6 +182,11 @@ function game_loop(timestamp) {
         y_velocity = 0;
     }
     
+    
+    
+    if (iterations % 2 === 0) {
+        change_animation_frame();
+    }
     
     iterations++;
     iterations %= 1000;
