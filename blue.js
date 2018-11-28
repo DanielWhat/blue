@@ -52,31 +52,6 @@ class Blue {
             return "FORWARDS";
         }
     }
-    
-    horizontal_direction() {
-        //return the direction blue is moving (not the same as facing since after you let go of button 
-        //blue consinues to move until friction slows him down [especially visible when in the air])
-        
-        if (x_velocity === 0) {
-            return "NONE";
-        } else if (x_velocity == Math.abs(x_velocity)) {
-            return "RIGHT";
-        } else {
-            return "LEFT";
-        }
-    }
-    
-    vertical_direction() {
-        //returns the direction blue is moving vertically (up, down or none)
-        
-        if (y_velocity === 0) {
-            return "NONE";
-        } else if (y_velocity == Math.abs(y_velocity)) {
-            return "DOWN";
-        } else {
-            return "UP";
-        }
-    }
 }
 
 
@@ -180,9 +155,12 @@ function is_adjustment_x_nessesary(blue_hitbox, object_hitbox) {
 
 
 
-function move_player(box_collision) {
+function move_player(object_hitboxes) {
     //Updates the player position accounting for collisions@
     
+    var i;
+    var obj_list_len = object_hitboxes.length;
+    var box_collision;
     var x_direction_factor;
     var y_direction_factor;
     
@@ -193,38 +171,60 @@ function move_player(box_collision) {
     blue.y += y_velocity;
     blue.x += x_velocity;
     
-    if (is_collision(blue_collision, box_collision)) { //if a collision would occur by moving, then place blue at the nearest location where he wouldn't collide
-        
-        if (is_adjustment_x_nessesary(blue_collision, box_collision)) {
-            
-            x_direction_factor = blue_collision.x0 < box_collision.x0 ? -0.5 : 0.5;
-            
-            while (is_collision(blue_collision, box_collision)) {
-                blue.x += x_direction_factor;
-                blue_collision.x0 += x_direction_factor;
+    for (i=0; i < obj_list_len; i++) {
+        box_collision = object_hitboxes[i];
+    
+        if (is_collision(blue_collision, box_collision)) { //if a collision would occur by moving, then place blue at the nearest location where he wouldn't collide
+
+            if (is_adjustment_x_nessesary(blue_collision, box_collision)) {
+                x_direction_factor = blue_collision.x0 < box_collision.x0 ? -0.5 : 0.5;
+
+                while (is_collision(blue_collision, box_collision)) {
+                    blue.x += x_direction_factor;
+                    blue_collision.x0 += x_direction_factor;
+                }
+
+            } else {
+                y_direction_factor = blue_collision.y0 < box_collision.y0 ? -0.5 : 0.5;
+
+                while (is_collision(blue_collision, box_collision)) {
+                    blue.y += y_direction_factor;
+                    blue_collision.y0 += y_direction_factor;
+                }
+                
+                if (y_direction_factor == 0.5) { //if you hit the platform from the bottom (ie jumping) you slowdown
+                    y_velocity = 0;
+                    
+                } else { // only on platform when you're on top, touching from the bottom doesn't count
+                    blue.is_on_platform = true;
+                    blue.is_in_air = false;
+                    blue.is_double_jumping = false;
+                }
             }
-            
         } else {
-            y_direction_factor = blue_collision.y0 < box_collision.y0 ? -0.5 : 0.5;
-            
-            while (is_collision(blue_collision, box_collision)) {
-                blue.y += y_direction_factor;
-                blue_collision.y0 += y_direction_factor;
+            if (is_just_above(blue_collision, object_hitboxes, 0.5)) {//if blue is on the platform
+                blue.is_on_platform = true;
+
+            } else if (blue.is_on_platform) { //if blue was on a platform before, but is not on the platform now
+                console.log("hello");
+                blue.is_on_platform = false;
+                blue.is_in_air = true; // blue is falling off a platform
             }
-            
-            blue.is_on_platform = true;
-            blue.is_in_air = false;
-            blue.is_double_jumping = false;
-        }
-    } else {
-        if (is_just_above(blue_collision, box_collision, 0.5)) {//if blue is on the platform
-            blue.is_on_platform = true;
-            
-        } else if (blue.is_on_platform) { //if blue was on a platform before, but is not on the platform now
-            blue.is_on_platform = false;
-            blue.is_in_air = true; // blue is falling off a platform
         }
     }
+}
+
+function generate_hitboxes(object_list) {
+    //Generates and returns a list of hitboxes for a given object list (where each element in the list is [x, y, width, height])
+    var i;
+    var object_hitboxes = [];
+    var obj_list_length = object_list.length;
+    
+    for (i=0; i < obj_list_length; i++) {
+        var box_hitbox = new CollisionSilhouette(object_list[i][0], object_list[i][1], object_list[i][2], object_list[i][3]);
+        object_hitboxes.push(box_hitbox);
+    }
+    return object_hitboxes;
 }
 
 
@@ -234,14 +234,19 @@ var iterations = 0; //keeps track of how many times game_loop has been called. w
 function game_loop(timestamp) {
     //The main game loop
     
-    //Draw background image
-    ctx.drawImage(background_img, 0, 0);
+    var i;
+    var object_list = [[500, 300, 200, 50], [100, 200, 50, 50]]; //x, y, width, height
+    var obj_list_len = object_list.length;
+    var object_hitboxes = generate_hitboxes(object_list);
     
+    //Draw background image and blue
+    ctx.drawImage(background_img, 0, 0);
     ctx.drawImage(blue_img, blue.x, blue.y);
     
-    ctx.fillStyle = "red";
-    ctx.fillRect(500, 300, 200, 50);
-    var box_collision = new CollisionSilhouette(500, 300, 200, 50);
+    for(i=0; i < obj_list_len; i++) {
+        ctx.fillStyle = "red";
+        ctx.fillRect(object_list[i][0], object_list[i][1], object_list[i][2], object_list[i][3]);
+    }
     
     
     //************************************************************************
@@ -302,7 +307,7 @@ function game_loop(timestamp) {
     //***************************** COLLISIONS *****************************
     //**********************************************************************
     
-    move_player(box_collision);
+    move_player(object_hitboxes);
     
     if (iterations % 2 === 0) {
         change_animation_frame();

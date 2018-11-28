@@ -44,11 +44,16 @@ class CollisionSilhouette {
     } 
 }
 
-function is_just_above(a, b, constant) {
-    //checks if a is within constant above b, returns true if this is the case.
+function is_just_above(a, b_list, constant) {
+    //checks if a is within constant above any b in b_list, returns true if this is the case.
+    var i;
+    var len = b_list.length;
+    var result = false;
     
-    a.y0 += constant;
-    result = is_collision(a, b)
-    a.y0 -= constant;
+    for (i=0; i < len; i++) {
+        a.y0 += constant;
+        result = (is_collision(a, b_list[i]) || result);
+        a.y0 -= constant;
+    }
     return result;
 }
