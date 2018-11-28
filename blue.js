@@ -19,14 +19,17 @@ blue_img.src = "./images/blue.png";
 const background_img = new Image();
 background_img.src = "./images/background.png";
 
+
+
 class Blue {
     //a class definition for blue (the character)
     
-    constructor(x, y, is_in_air=false, is_double_jumping=false) {
+    constructor(x, y, is_in_air=false, is_double_jumping=false, is_on_platform=false) {
         this.x = x;
         this.y = y;
         this.is_in_air = is_in_air;
         this.is_double_jumping = is_double_jumping;
+        this.is_on_platform = false;
     }
     
     is_walking() {
@@ -49,10 +52,39 @@ class Blue {
             return "FORWARDS";
         }
     }
+    
+    horizontal_direction() {
+        //return the direction blue is moving (not the same as facing since after you let go of button 
+        //blue consinues to move until friction slows him down [especially visible when in the air])
+        
+        if (x_velocity === 0) {
+            return "NONE";
+        } else if (x_velocity == Math.abs(x_velocity)) {
+            return "RIGHT";
+        } else {
+            return "LEFT";
+        }
+    }
+    
+    vertical_direction() {
+        //returns the direction blue is moving vertically (up, down or none)
+        
+        if (y_velocity === 0) {
+            return "NONE";
+        } else if (y_velocity == Math.abs(y_velocity)) {
+            return "DOWN";
+        } else {
+            return "UP";
+        }
+    }
 }
+
+
 
 var blue = new Blue(385, 395);
 var blue_collision = new CollisionSilhouette(385, 395, blue_img.width, blue_img.height);
+
+
 
 function button_push_handler(event) {
     //Handles the changing of the global key_pressed when a button is pushed
@@ -70,6 +102,8 @@ function button_push_handler(event) {
     }
 }
 
+
+
 function button_up_handler (event) {
     //Handles the resetting of the global key_pressed when a button is let go
     
@@ -86,8 +120,12 @@ function button_up_handler (event) {
     }
 }
 
+
+
 document.addEventListener("keydown", button_push_handler);
 document.addEventListener("keyup", button_up_handler);
+
+
 
 function is_all_keys_up() {
     //Returns true if all the keys in keys_pressed object are up (i.e not pressed)
@@ -102,6 +140,8 @@ function is_all_keys_up() {
     }
     return all_keys_up;
 }
+
+
 
 var frame_counter = 1;
 function change_animation_frame() {
@@ -120,6 +160,75 @@ function change_animation_frame() {
     }
 }
 
+
+function is_adjustment_x_nessesary(blue_hitbox, object_hitbox) {
+    
+    var c_x0 = blue_hitbox.x0 < object_hitbox.x0 ? object_hitbox.x0 : blue_hitbox.x0;
+    var c_y0 = blue_hitbox.y0 < object_hitbox.y0 ? object_hitbox.y0 : blue_hitbox.y0;
+    var c_x1 = blue_hitbox.x1 < object_hitbox.x1 ? blue_hitbox.x1 : object_hitbox.x1;
+    var c_y1 = blue_hitbox.y1 < object_hitbox.y1 ? blue_hitbox.y1 : object_hitbox.y1;
+    
+    var width = c_x1 - c_x0;
+    var height = c_y1 - c_y0;
+    
+    if (height > width) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
+
+
+function move_player(box_collision) {
+    //Updates the player position accounting for collisions@
+    
+    var x_direction_factor;
+    var y_direction_factor;
+    
+    //update collision silhouette
+    blue_collision.x0 += x_velocity;
+    blue_collision.y0 += y_velocity;
+    
+    blue.y += y_velocity;
+    blue.x += x_velocity;
+    
+    if (is_collision(blue_collision, box_collision)) { //if a collision would occur by moving, then place blue at the nearest location where he wouldn't collide
+        
+        if (is_adjustment_x_nessesary(blue_collision, box_collision)) {
+            
+            x_direction_factor = blue_collision.x0 < box_collision.x0 ? -0.5 : 0.5;
+            
+            while (is_collision(blue_collision, box_collision)) {
+                blue.x += x_direction_factor;
+                blue_collision.x0 += x_direction_factor;
+            }
+            
+        } else {
+            y_direction_factor = blue_collision.y0 < box_collision.y0 ? -0.5 : 0.5;
+            
+            while (is_collision(blue_collision, box_collision)) {
+                blue.y += y_direction_factor;
+                blue_collision.y0 += y_direction_factor;
+            }
+            
+            blue.is_on_platform = true;
+            blue.is_in_air = false;
+            blue.is_double_jumping = false;
+        }
+    } else {
+        if (is_just_above(blue_collision, box_collision, 0.5)) {//if blue is on the platform
+            blue.is_on_platform = true;
+            
+        } else if (blue.is_on_platform) { //if blue was on a platform before, but is not on the platform now
+            blue.is_on_platform = false;
+            blue.is_in_air = true; // blue is falling off a platform
+        }
+    }
+}
+
+
+
 var iterations = 0; //keeps track of how many times game_loop has been called. we artificially give this a max value of 999 (see bottom of game loop)
 
 function game_loop(timestamp) {
@@ -131,8 +240,8 @@ function game_loop(timestamp) {
     ctx.drawImage(blue_img, blue.x, blue.y);
     
     ctx.fillStyle = "red";
-    ctx.fillRect(500, 350, 50, 50);
-    var box_collision = new CollisionSilhouette(500, 350, 50, 50);
+    ctx.fillRect(500, 300, 200, 50);
+    var box_collision = new CollisionSilhouette(500, 300, 200, 50);
     
     
     //************************************************************************
@@ -141,6 +250,8 @@ function game_loop(timestamp) {
     
     if (blue.is_in_air) { //if blue has jumped, then decrease the change in his y position (because gravity)
         y_velocity += gravity;
+    } else {
+        y_velocity = 0;
     }
 
     x_velocity *= blue.is_in_air ? (friction + 0.19) : friction; //friction is less in the air
@@ -150,11 +261,11 @@ function game_loop(timestamp) {
     }
     
     if (keys_pressed.a) {
-        x_velocity = -1 * 8; 
+        x_velocity = -1 * 6; 
     }
     
     if (keys_pressed.d) {
-        x_velocity = 8;
+        x_velocity = 6;
     } 
     
     if (keys_pressed.s) {
@@ -191,20 +302,7 @@ function game_loop(timestamp) {
     //***************************** COLLISIONS *****************************
     //**********************************************************************
     
-    if (is_collision(blue_collision, box_collision)) { 
-        //TO DO
-    }
-    
-    
-    
-    //Move the characterconsole.log(blue_collision.x1); 
-    blue.y += y_velocity;
-    blue.x += x_velocity;
-    
-    //update collision silhouette
-    blue_collision.x0 += x_velocity;
-    blue_collision.y0 += y_velocity;
-    
+    move_player(box_collision);
     
     if (iterations % 2 === 0) {
         change_animation_frame();

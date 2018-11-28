@@ -43,3 +43,12 @@ class CollisionSilhouette {
         this._y0 = new_y0;
     } 
 }
+
+function is_just_above(a, b, constant) {
+    //checks if a is within constant above b, returns true if this is the case.
+    
+    a.y0 += constant;
+    result = is_collision(a, b)
+    a.y0 -= constant;
+    return result;
+}
