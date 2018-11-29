@@ -12,6 +12,7 @@ var y_velocity = 0;
 var x_velocity = 0;
 var gravity = 0.5;
 var friction = 0.80;
+var ground_level = 395;
 
 var blue_img = new Image();
 blue_img.src = "./images/blue.png";
@@ -24,10 +25,11 @@ background_img.src = "./images/background.png";
 class Blue {
     //a class definition for blue (the character)
     
-    constructor(x, y, is_in_air=false, is_double_jumping=false, is_on_platform=false) {
+    constructor(x, y, is_in_air=false, is_jumping=false, is_double_jumping=false, is_on_platform=false) {
         this.x = x;
         this.y = y;
         this.is_in_air = is_in_air;
+        this.is_jumping = false;
         this.is_double_jumping = is_double_jumping;
         this.is_on_platform = false;
     }
@@ -56,8 +58,8 @@ class Blue {
 
 
 
-var blue = new Blue(385, 395);
-var blue_collision = new CollisionSilhouette(385, 395, blue_img.width, blue_img.height);
+var blue = new Blue(385, ground_level);
+var blue_collision = new CollisionSilhouette(385, ground_level, blue_img.width, blue_img.height);
 
 
 
@@ -198,6 +200,7 @@ function move_player(object_hitboxes) {
                 } else { // only on platform when you're on top, touching from the bottom doesn't count
                     blue.is_on_platform = true;
                     blue.is_in_air = false;
+                    blue.is_jumping = false;
                     blue.is_double_jumping = false;
                 }
             }
@@ -206,7 +209,6 @@ function move_player(object_hitboxes) {
                 blue.is_on_platform = true;
 
             } else if (blue.is_on_platform) { //if blue was on a platform before, but is not on the platform now
-                console.log("hello");
                 blue.is_on_platform = false;
                 blue.is_in_air = true; // blue is falling off a platform
             }
@@ -283,7 +285,8 @@ function game_loop(timestamp) {
     //********************************************************************
     
     if (keys_pressed.space) {
-        if (!blue.is_in_air) { //i.e blue is jumping for the first time
+        if (!blue.is_jumping) { //i.e blue is jumping for the first time
+            blue.is_jumping = true;
             blue.is_in_air = true;
             y_velocity = -10; 
             keys_pressed.space = false; //this forces the user to press space again in order to trigger the double jump (see button_push_handler)
@@ -294,10 +297,11 @@ function game_loop(timestamp) {
     }
     
     //blue stop blue from falling past the ground (i.e stop y from becoming too large)
-    if (blue.y > 395) {
-        blue.y = 395;
-        blue_collision.y0 = 395;
+    if (blue.y > ground_level) {
+        blue.y = ground_level;
+        blue_collision.y0 = ground_level;
         blue.is_in_air = false;
+        blue.is_jumping = false;
         blue.is_double_jumping = false;
         y_velocity = 0;
     }
