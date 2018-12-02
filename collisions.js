@@ -50,10 +50,10 @@ function is_just_above(a, b_list, constant) {
     var len = b_list.length;
     var result = false;
     
+    a.y0 += constant;
     for (i=0; i < len; i++) {
-        a.y0 += constant;
         result = (is_collision(a, b_list[i]) || result);
-        a.y0 -= constant;
     }
+    a.y0 -= constant;
     return result;
 }

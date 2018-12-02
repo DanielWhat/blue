@@ -12,7 +12,7 @@ var y_velocity = 0;
 var x_velocity = 0;
 var gravity = 0.5;
 var friction = 0.80;
-var ground_level = 395;
+var ground_level = 450;
 
 var blue_img = new Image(32, 32);
 blue_img.src = "./images/blue.png";
@@ -29,9 +29,9 @@ class Blue {
         this.x = x;
         this.y = y;
         this.is_in_air = is_in_air;
-        this.is_jumping = false;
+        this.is_jumping = is_jumping;
         this.is_double_jumping = is_double_jumping;
-        this.is_on_platform = false;
+        this.is_on_platform = is_on_platform;
     }
     
     is_walking() {
@@ -165,6 +165,7 @@ function move_player(object_hitboxes) {
     var box_collision;
     var x_direction_factor;
     var y_direction_factor;
+    var falling_trigger = true;
     
     //update collision silhouette
     blue_collision.x0 += x_velocity;
@@ -185,30 +186,40 @@ function move_player(object_hitboxes) {
                     blue.x += x_direction_factor;
                     blue_collision.x0 += x_direction_factor;
                 }
+                
+                x_velocity = 0; //since blue has hit the wall he stops moving in that direction
 
             } else {
-                y_direction_factor = blue_collision.y0 < box_collision.y0 ? -0.5 : 0.5;
-
-                while (is_collision(blue_collision, box_collision)) {
-                    blue.y += y_direction_factor;
-                    blue_collision.y0 += y_direction_factor;
-                }
                 
-                if (y_direction_factor == 0.5) { //if you hit the platform from the bottom (ie jumping) you slowdown
-                    y_velocity = 0;
+                y_direction_factor = blue_collision.y0 < box_collision.y0 ? -0.5 : 0.5;
+                
+                if (blue.is_jumping && y_velocity < 0 && y_direction_factor == -0.5) { //This makes jumping on to a platform natural when previously running against it
+                    //Do nothing
                     
-                } else { // only on platform when you're on top, touching from the bottom doesn't count
-                    blue.is_on_platform = true;
-                    blue.is_in_air = false;
-                    blue.is_jumping = false;
-                    blue.is_double_jumping = false;
+                } else {
+                    while (is_collision(blue_collision, box_collision)) {
+                        blue.y += y_direction_factor;
+                        blue_collision.y0 += y_direction_factor;
+                    }
+
+                    if (y_direction_factor == 0.5) { //if you hit the platform from the bottom (ie jumping) you slowdown
+                        y_velocity = 0;
+
+                    } else { // only on platform when you're on top, touching from the bottom doesn't count
+                        blue.is_on_platform = true;
+                        blue.is_in_air = false;
+                        blue.is_jumping = false;
+                        blue.is_double_jumping = false;
+                    }
+                    
                 }
             }
         } else {
-            if (is_just_above(blue_collision, object_hitboxes, 1)) {//if blue is on the platform
+            if (is_just_above(blue_collision, object_hitboxes, 0.5)) {//if blue is on the platform
                 blue.is_on_platform = true;
+                falling_trigger = false;
 
-            } else if (blue.is_on_platform) { //if blue was on a platform before, but is not on the platform now
+            } else if (blue.is_on_platform && falling_trigger) { //if blue was on a platform before, but is not on the platform now
                 blue.is_on_platform = false;
                 blue.is_in_air = true; // blue is falling off a platform
             }
@@ -237,7 +248,7 @@ function game_loop(timestamp) {
     //The main game loop
     
     var i;
-    var object_list = [[500, 300, 200, 50], [100, 200, 50, 50]]; //x, y, width, height
+    var object_list = [[0, 50, 10, 460], [10, 100, 420, 10], [700, 100, 10, 460], [620, 400, 80, 10], [650, 300, 50, 10], [650, 200, 50, 10], [640, 100, 390, 10]]; //x, y, width, height
     var obj_list_len = object_list.length;
     var object_hitboxes = generate_hitboxes(object_list);
     
@@ -268,16 +279,16 @@ function game_loop(timestamp) {
     }
     
     if (keys_pressed.a) {
-        x_velocity = -1 * 6; 
+        x_velocity = -1 * 3; 
     }
     
     if (keys_pressed.d) {
-        x_velocity = 6;
+        x_velocity = 3;
     } 
     
-    if (keys_pressed.s) {
-        blue.y += 10; 
-    }
+    /*if (keys_pressed.s) {
+        blue.y += 5; 
+    }*/
     
     
     //********************************************************************
@@ -288,11 +299,11 @@ function game_loop(timestamp) {
         if (!blue.is_jumping) { //i.e blue is jumping for the first time
             blue.is_jumping = true;
             blue.is_in_air = true;
-            y_velocity = -10; 
+            y_velocity = -7; 
             keys_pressed.space = false; //this forces the user to press space again in order to trigger the double jump (see button_push_handler)
         } else if (!blue.is_double_jumping) { //i.e blue is in the air, but blue has not double jumped yet
             blue.is_double_jumping = true;                         
-            y_velocity = -10;                                               
+            y_velocity = -7;                                               
         }
     }
     
@@ -312,6 +323,7 @@ function game_loop(timestamp) {
     //**********************************************************************
     
     move_player(object_hitboxes);
+    //console.log(blue.is_in_air);
     
     if (iterations % 2 === 0) {
         change_animation_frame();
