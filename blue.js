@@ -18,7 +18,7 @@ var blue_img = new Image();
 blue_img.src = "./images/blue.png";
 
 const background_img = new Image();
-background_img.src = "./images/background.png";
+background_img.src = "./images/textures/cave_background.png";
 
 
 
