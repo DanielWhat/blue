@@ -14,11 +14,11 @@ var gravity = 0.5;
 var friction = 0.80;
 var ground_level = 395;
 
-var blue_img = new Image(64, 64);
+var blue_img = new Image(32, 32);
 blue_img.src = "./images/blue.png";
 
 const background_img = new Image();
-background_img.src = "./images/background.png";
+background_img.src = "./images/textures/cave_background.png";
 
 
 
@@ -170,8 +170,6 @@ function move_player(object_hitboxes) {
     blue_collision.x0 += x_velocity;
     blue_collision.y0 += y_velocity;
     
-    console.log(blue.width);
-    
     blue.y += y_velocity;
     blue.x += x_velocity;
     
@@ -190,9 +188,6 @@ function move_player(object_hitboxes) {
 
             } else {
                 y_direction_factor = blue_collision.y0 < box_collision.y0 ? -0.5 : 0.5;
-                console.log("collision");
-                console.log(blue_collision.y0);
-                console.log(box_collision.y0);
 
                 while (is_collision(blue_collision, box_collision)) {
                     blue.y += y_direction_factor;
@@ -203,7 +198,6 @@ function move_player(object_hitboxes) {
                     y_velocity = 0;
                     
                 } else { // only on platform when you're on top, touching from the bottom doesn't count
-                    console.log("on platform");
                     blue.is_on_platform = true;
                     blue.is_in_air = false;
                     blue.is_jumping = false;
