@@ -12,7 +12,7 @@ var y_velocity = 0;
 var x_velocity = 0;
 var gravity = 0.5;
 var friction = 0.80;
-var ground_level = 450;
+var ground_level = 485;
 
 var blue_img = new Image(32, 32);
 blue_img.src = "./images/blue.png";
@@ -248,7 +248,7 @@ function game_loop(timestamp) {
     //The main game loop
     
     var i;
-    var object_list = [[0, 50, 10, 460], [10, 100, 420, 10], [700, 100, 10, 460], [620, 400, 80, 10], [650, 300, 50, 10], [650, 200, 50, 10], [640, 100, 390, 10]]; //x, y, width, height
+    var object_list = [[0, -139, 16, 656, "./images/textures/656px_high_wall.png"], [16, 101, 416, 16, "./images/textures/416px_long_platform.png"], [704, 100, 16, 416, "./images/textures/416px_high_wall.png"], [656, 420, 48, 16, "./images/textures/48px_long_platform.png"], [656, 324, 48, 16, "./images/textures/48px_long_platform.png"], [656, 228, 48, 16, "./images/textures/48px_long_platform.png"], [640, 100, 384, 16, "./images/textures/384px_long_platform.png"], [400, 350, 16, 16, "./images/textures/floor_block.png"], [280, 250, 16, 16, "./images/textures/floor_block.png"], [384, 180, 48, 16, "./images/textures/48px_long_platform.png"], [16, 245, 48, 16, "./images/textures/48px_long_platform.png"], [800, 0, 16, 656, "./images/textures/96px_high_wall_metal.png"]]; //x, y, width, height
     var obj_list_len = object_list.length;
     var object_hitboxes = generate_hitboxes(object_list);
     
@@ -257,8 +257,9 @@ function game_loop(timestamp) {
     ctx.drawImage(blue_img, blue.x, blue.y);
     
     for(i=0; i < obj_list_len; i++) {
-        ctx.fillStyle = "red";
-        ctx.fillRect(object_list[i][0], object_list[i][1], object_list[i][2], object_list[i][3]);
+        var platform = new Image(object_list[i][2], object_list[i][3]);
+        platform.src = object_list[i][4];
+        ctx.drawImage(platform, object_list[i][0], object_list[i][1]);
     }
     
     
