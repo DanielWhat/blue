@@ -5,6 +5,8 @@ const cvs = document.getElementById('canvas');
 const ctx = cvs.getContext('2d');
 var stop_id;
 
+var is_chrome = typeof(window.chrome) == "object";
+
 var keys_pressed = {a: false, w: false, d: false, s: false, space: false};
 
 var pixel_size = 4; //the minimum block size@
@@ -28,9 +30,12 @@ ground_img.src = "./images/textures/ground.png";
 
 var music = new Audio();
 music.src = "./sounds/spooky_cave.wav";
-music.loop = true;
 music.volume = 0.3;
-//music.play();
+music.loop = true;
+
+if (!is_chrome) {
+    music.play();
+}
 
 
 var coin_sound = new Audio();
@@ -391,6 +396,12 @@ function game_loop(timestamp) {
     //The main game loop
     
     var object_hitboxes = generate_hitboxes(object_list);
+    
+    if (is_chrome) {
+        if (music.paused) {
+            music.play();
+        }
+    }
     
     //Draw background image and blue
     ctx.drawImage(background_img, 0, 0);
