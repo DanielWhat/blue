@@ -14,7 +14,7 @@ function is_collision(collisionObj_a, collisionObj_b) {
 }
 
 class CollisionSilhouette {
-    //A collision object@
+    //A hitbox for handling collisions
     
     constructor(x0, y0, width, height) {
         this.x0 = x0;
