@@ -8,8 +8,12 @@ var stop_id;
 var timeout_object;
 
 var mouse_clicked = false;
+var is_loaded = false;
 
 var is_chrome = typeof(window.chrome) == "object";
+var is_safari = navigator.userAgent.indexOf("Safari") > -1;
+
+var safari_sound_button = document.getElementById("sound_button");
 
 var keys_pressed = {a: false, w: false, d: false, s: false, space: false};
 
@@ -19,6 +23,15 @@ var x_velocity = 0;
 var gravity = 0.5;
 var friction = 0.80;
 var ground_level = 485;
+
+// Let user know loading is occuring
+ctx.fillStyle = "white";
+ctx.textAlign = "center";
+ctx.font = "45px Changa One";
+ctx.fillText("LOADING", cvs.width/2, cvs.height/2);
+ctx.font = "20px Changa One";
+ctx.fillText("Please wait a few moments", cvs.width/2, cvs.height/2+30);
+
 
 var blue_img = new Image(32, 32);
 blue_img.src = "./images/blue.png";
@@ -34,13 +47,7 @@ ground_img.src = "./images/textures/ground.png";
 
 var music = new Audio();
 music.src = "./sounds/spooky_cave.wav";
-music.volume = 0.3;
 music.loop = true;
-
-if (!is_chrome) {
-    music.play();
-}
-
 
 var coin_sound = new Audio();
 coin_sound.src = "./sounds/coin_sound.wav";
@@ -63,49 +70,9 @@ var death_sound = new Audio();
 death_sound.src = "./sounds/death_sound.wav";
 
 
-//Objects and ornaments
 
-
-class Blue {
-    //a class definition for blue (the character)
-    
-    constructor(x, y, is_in_air=false, is_jumping=false, is_double_jumping=false, is_on_platform=false, item="NONE", is_dead=false) {
-        this.x = x;
-        this.y = y;
-        this.is_in_air = is_in_air;
-        this.is_jumping = is_jumping;
-        this.is_double_jumping = is_double_jumping;
-        this.is_on_platform = is_on_platform;
-        this.item = item;
-        this.is_dead = is_dead;
-    }
-    
-    is_walking() {
-        //returns true if blue is walking
-        if ((keys_pressed.a || keys_pressed.d) && !this.is_in_air) { //can't be walking if you're jumping
-            return true;
-        } else {
-            return false;
-        }
-    }
-    
-    facing_direction() {
-        //return the direction blue is facing: LEFT, RIGHT, or FORWARDS.
-        
-        if (keys_pressed.d) {
-            return "RIGHT";
-        } else if (keys_pressed.a) {
-            return "LEFT";
-        } else {
-            return "FORWARDS";
-        }
-    }
-}
-
-
-
-var blue = new Blue(460, ground_level);
-var blue_collision = new CollisionSilhouette(460, ground_level, blue_img.width, blue_img.height);
+var blue = new Character(460, ground_level);
+var blue_hitbox = new CollisionHitbox(460, ground_level, blue_img.width, blue_img.height);
 
 
 
@@ -122,6 +89,10 @@ function button_push_handler(event) {
         keys_pressed.s = true;
     } else if ((event.key == " " || event.key == "Spacebar") && !event.repeat) { //auto-repeats don't count as pressing space twice,
         keys_pressed.space = true;                                              //we want the user to actually press space twice
+    }
+    
+    if (is_safari && is_loaded) {
+        music.play();
     }
 }
 
@@ -165,124 +136,21 @@ function change_animation_frame() {
     }
 }
 
-
-function is_adjustment_x_nessesary(blue_hitbox, object_hitbox) {
-    
-    var c_x0 = blue_hitbox.x0 < object_hitbox.x0 ? object_hitbox.x0 : blue_hitbox.x0;
-    var c_y0 = blue_hitbox.y0 < object_hitbox.y0 ? object_hitbox.y0 : blue_hitbox.y0;
-    var c_x1 = blue_hitbox.x1 < object_hitbox.x1 ? blue_hitbox.x1 : object_hitbox.x1;
-    var c_y1 = blue_hitbox.y1 < object_hitbox.y1 ? blue_hitbox.y1 : object_hitbox.y1;
-    
-    var width = c_x1 - c_x0;
-    var height = c_y1 - c_y0;
-    
-    if (height > width) {
-        return true;
-    } else {
-        return false;
-    }
-}
-
-
-
-function move_player(object_hitboxes) {
-    //Updates the player position accounting for collisions@
+function init() {
+    //Preloads images.
     
     var i;
-    var obj_list_len = object_hitboxes.length;
-    var box_collision;
-    var x_direction_factor;
-    var y_direction_factor;
-    var falling_trigger = true;
     
-    //update collision silhouette
-    blue_collision.x0 += x_velocity;
-    blue_collision.y0 += y_velocity;
+    for (i=0; i < 7; i++) {
+        let image = new Image();
+        image.src = "./images/LEFT/walking_frame" + (i + 1) + ".png";
+    }
     
-    blue.y += y_velocity;
-    blue.x += x_velocity;
-    
-    for (i=0; i < obj_list_len; i++) {
-        box_collision = object_hitboxes[i];
-    
-        if (is_collision(blue_collision, box_collision)) { //if a collision would occur by moving, then place blue at the nearest location where he wouldn't collide
-
-            if (is_adjustment_x_nessesary(blue_collision, box_collision)) {
-                x_direction_factor = blue_collision.x0 < box_collision.x0 ? -0.5 : 0.5;
-
-                while (is_collision(blue_collision, box_collision)) {
-                    blue.x += x_direction_factor;
-                    blue_collision.x0 += x_direction_factor;
-                }
-                
-                x_velocity = 0; //since blue has hit the wall he stops moving in that direction
-
-            } else {
-                
-                y_direction_factor = blue_collision.y0 < box_collision.y0 ? -0.5 : 0.5;
-                
-                if (blue.is_jumping && y_velocity < 0 && y_direction_factor == -0.5) { //This makes jumping on to a platform natural when previously running against it
-                    //Do nothing
-                    
-                } else {
-                    while (is_collision(blue_collision, box_collision)) {
-                        blue.y += y_direction_factor;
-                        blue_collision.y0 += y_direction_factor;
-                    }
-
-                    if (y_direction_factor == 0.5) { //if you hit the platform from the bottom (ie jumping) you slowdown
-                        y_velocity = 0;
-
-                    } else { // only on platform when you're on top, touching from the bottom doesn't count
-                        blue.is_on_platform = true;
-                        blue.is_in_air = false;
-                        blue.is_jumping = false;
-                        blue.is_double_jumping = false;
-                    }
-                    
-                }
-            }
-        } else {
-            if (is_just_above(blue_collision, object_hitboxes, 0.5)) {//if blue is on the platform
-                blue.is_on_platform = true;
-                falling_trigger = false;
-
-            } else if (blue.is_on_platform && falling_trigger) { //if blue was on a platform before, but is not on the platform now
-                blue.is_on_platform = false;
-                blue.is_in_air = true; // blue is falling off a platform
-            }
-        }
+    for (i=0; i < 7; i++) {
+        let image = new Image();
+        image.src = "./images/RIGHT/walking_frame" + (i + 1) + ".png";
     }
 }
-
-
-
-function generate_hitboxes(object_list) {
-    //Generates and returns a list of hitboxes for a given object list (where each element in the list is [x, y, width, height])
-    var i;
-    var object_hitboxes = [];
-    var obj_list_length = object_list.length;
-    
-    for (i=0; i < obj_list_length; i++) {
-        var box_hitbox = new CollisionSilhouette(object_list[i][0], object_list[i][1], object_list[i][2], object_list[i][3]);
-        object_hitboxes.push(box_hitbox);
-    }
-    return object_hitboxes;
-}
-
-
-
-function move_objects(object_list, object_hitboxes, main_door) {
-    //Moves objects/obstacles if nessesary
-    
-    if (!main_door.is_locked) {
-        if (object_list[main_door.index][1] > object_list[main_door.index][1] - object_list[main_door.index][3]) {
-            object_list[main_door.index][1] -= 1;
-            object_hitboxes[main_door.index].y0 -= 1;
-        }
-    }
-}
-
 
 
 function display_images(images_list) {
@@ -297,6 +165,8 @@ function display_images(images_list) {
         ctx.drawImage(image, images_list[i][0], images_list[i][1]);
     }
 }
+
+
 
 function display_end_game_screen(result) {
     // Displays and endgame screen depending on if result is "WIN" or "LOOSE"
@@ -323,7 +193,7 @@ function display_end_game_screen(result) {
 }
 
 function reset_on_mouseclick() {
-    //This function only restarts the game is the mouse has been clicked
+    //This function only restarts the game if the mouse has been clicked
     
     if (!mouse_clicked) {
         //Do nothing
@@ -333,82 +203,18 @@ function reset_on_mouseclick() {
 }
 
 
-function ornament_handler(ornament_list, main_door) {
-    // Performs a variety of tasks relating to ornaments (e.g coins)
-    
-    var i;
-    var key_index;
-    var len = ornament_list.length;
-    
-    for (i=0; i < len; i++) {
-        if (ornament_list[i][5] == "COIN") {
-            let coin_hitbox = new CollisionSilhouette(ornament_list[i][0], ornament_list[i][1], ornament_list[i][2], ornament_list[i][3]);
-            
-            if (is_collision(blue_collision, coin_hitbox)) {
-                ornament_list.splice(i, 1);
-                coin_sound.play();
-                break;
-            }
-            
-        } else if (ornament_list[i][5] == "KEY") {
-            let key_hitbox = new CollisionSilhouette(ornament_list[i][0], ornament_list[i][1], ornament_list[i][2], ornament_list[i][3]);
-            
-            if (blue.item != "KEY" && is_collision(blue_collision, key_hitbox)) {
-                blue.item = "KEY"; // blue is now carrying the key
-                key_sound.play();
-                break;
-            }
-            
-            if (blue.item == "KEY") { //the key moves along with blue
-                ornament_list[i][0] = blue.x + 8;
-                ornament_list[i][1] = blue.y - 20;
-            }
-            
-            key_index = i;
-            
-        } else if (ornament_list[i][5] == "LOCK") {
-            let lock_hitbox = new CollisionSilhouette(ornament_list[i][0], ornament_list[i][1], ornament_list[i][2], ornament_list[i][3]);
-            
-            if (is_collision(blue_collision, lock_hitbox)) {
-                if (blue.item == "KEY") {
-                    ornament_list.splice(i, 1);
-                    ornament_list.splice(key_index, 1);
-                    blue.item = "NONE";
-                    main_door.is_locked = false;
-                    unlocked_sound.play();
-                    break;
-                } else {
-                    locked_sound.play();
-                }
-            }
-            
-        } else if (ornament_list[i][5] == "EYE") {
-            let eye_hitbox = new CollisionSilhouette(ornament_list[i][0], ornament_list[i][1], ornament_list[i][2], ornament_list[i][3]);
-            
-            if (is_collision(blue_collision, eye_hitbox)) {
-                ornament_list.splice(i, 1);
-                leviathan_sound.play();
-                blue.item = "EYE";
-                blue.is_dead = true; //He's not really dying, this just gets us to end game screen
-                break;
-            }
-            
-        } else if (ornament_list[i][5] == "SPIKES") {
-            let spike_hitbox = new CollisionSilhouette(ornament_list[i][0], ornament_list[i][1], ornament_list[i][2], ornament_list[i][3]);
-            
-            if (is_collision(blue_collision, spike_hitbox)) {
-                death_sound.play();
-                blue.is_dead = true;
-                break;
-            }
-        }
-    }
-}
-
-
 
 var iterations = 0; //keeps track of how many times game_loop has been called. we artificially give this a max value of 999 (see bottom of game loop)
 var is_first_call = true;
+
+document.addEventListener("readystatechange", function(event) {
+                                                    if (document.readyState == "complete" && is_first_call) {
+                                                        is_loaded = true;
+                                                        music.play();
+                                                        music.volume = 0.3;
+                                                        game_loop();
+                                                    }
+                                                })
 
 function game_loop(object_list=[], object_hitboxes=[], ornament_list=[], main_door={is_locked: true, index: -1}) {
     //The main game loop
@@ -416,7 +222,7 @@ function game_loop(object_list=[], object_hitboxes=[], ornament_list=[], main_do
     if (is_first_call) {
         clearTimeout(timeout_object);
         
-        object_list = [[0, -139, 16, 656, "./images/textures/656px_high_wall.png"], [16, 101, 416, 16, "./images/textures/416px_long_platform.png"], [704, 100, 16, 416, "./images/textures/416px_high_wall.png"], [656, 420, 48, 16, "./images/textures/48px_long_platform.png"], [656, 324, 48, 16, "./images/textures/48px_long_platform.png"], [656, 228, 48, 16, "./images/textures/48px_long_platform.png"], [640, 100, 384, 16, "./images/textures/384px_long_platform.png"], [400, 350, 16, 16, "./images/textures/floor_block.png"], [280, 250, 16, 16, "./images/textures/floor_block.png"], [384, 180, 48, 16, "./images/textures/48px_long_platform.png"], [16, 245, 48, 16, "./images/textures/48px_long_platform.png"], [800, 0, 16, 96, "./images/textures/96px_high_wall_metal.png"], [800, -96, 16, 96, "./images/coin.png"]]; //x, y, width, height
+        object_list = [[0, -139, 16, 656, "./images/textures/656px_high_wall.png"], [16, 101, 416, 16, "./images/textures/416px_long_platform.png"], [704, 100, 16, 416, "./images/textures/416px_high_wall.png"], [656, 420, 48, 16, "./images/textures/48px_long_platform.png"], [656, 324, 48, 16, "./images/textures/48px_long_platform.png"], [656, 228, 48, 16, "./images/textures/48px_long_platform.png"], [640, 100, 384, 16, "./images/textures/384px_long_platform.png"], [400, 350, 16, 16, "./images/textures/floor_block.png"], [280, 250, 16, 16, "./images/textures/floor_block.png"], [384, 180, 48, 16, "./images/textures/48px_long_platform.png"], [16, 245, 48, 16, "./images/textures/48px_long_platform.png"], [800, 0, 16, 96, "./images/textures/96px_high_wall_metal.png"], [800, -96, 16, 96, "./images/coin.png"], [1024, -80, 16, 200, "./images/coin.png"]]; //x, y, width, height
         
         object_hitboxes = generate_hitboxes(object_list);
     
@@ -425,12 +231,6 @@ function game_loop(object_list=[], object_hitboxes=[], ornament_list=[], main_do
         main_door = {is_locked: true, index: 11};
         
         is_first_call = false;
-    }
-    
-    if (is_chrome) {
-        if (music.paused) {
-            music.play();
-        }
     }
     
     //Draw background image and blue
@@ -489,7 +289,7 @@ function game_loop(object_list=[], object_hitboxes=[], ornament_list=[], main_do
     //blue stop blue from falling past the ground (i.e stop y from becoming too large)
     if (blue.y > ground_level) {
         blue.y = ground_level;
-        blue_collision.y0 = ground_level;
+        blue_hitbox.y0 = ground_level;
         blue.is_in_air = false;
         blue.is_jumping = false;
         blue.is_double_jumping = false;
@@ -520,10 +320,11 @@ function game_loop(object_list=[], object_hitboxes=[], ornament_list=[], main_do
         } else {
             mouse_clicked = false;
             blue.is_dead = false;
+            blue.item = "NONE";
             display_end_game_screen("LOOSE");
             cancelAnimationFrame(stop_id);
-            blue.x = blue_collision.x0 = 460;
-            blue.y = blue_collision.y0 = ground_level;
+            blue.x = blue_hitbox.x0 = 460;
+            blue.y = blue_hitbox.y0 = ground_level;
             is_first_call = true; //this will reset the game
             timeout_object = setInterval(reset_on_mouseclick, 100);
         }
@@ -534,4 +335,4 @@ function game_loop(object_list=[], object_hitboxes=[], ornament_list=[], main_do
 }
 
 //var game = setInterval(game_loop, 1000/40);
-game_loop();
+init();

@@ -1,7 +1,7 @@
 /* FILE: collisions.js
  * AUTHOR: Telecasterdude
- * DESCRIPTION: A JS module to detect whether two objects have collided. 
-*/
+ * DESCRIPTION: A JS module for detecting collisions. 
+ */
 
 /*jshint esversion: 6 */
 /* jshint browser: true */
@@ -13,7 +13,7 @@ function is_collision(collisionObj_a, collisionObj_b) {
     return !(collisionObj_a.x1 < collisionObj_b.x0 || collisionObj_b.x1 < collisionObj_a.x0 || collisionObj_a.y1 < collisionObj_b.y0 || collisionObj_b.y1 < collisionObj_a.y0);
 }
 
-class CollisionSilhouette {
+class CollisionHitbox {
     //A hitbox for handling collisions
     
     constructor(x0, y0, width, height) {
